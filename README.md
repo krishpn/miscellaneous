@@ -1,5 +1,5 @@
 
-**TECHNICAL STEPS: Setup & Deployment Guide**
+[**TECHNICAL STEPS: Setup & Deployment Guide**](https://krishpn.github.io/projects/20260816/)
 
 
 ```bash
