@@ -2,9 +2,10 @@
 
 This template dynamically handles decoupled streaming (vLLM), dynamic batching queues, GPU instance duplication, and variable input/output tensor shapes.
 
-Code snippet
-```jinja2
-1. Master Jinja2 Config Template (templates/config.pbtxt.j2)
+**Master Jinja2 Config Template (`templates/config.pbtxt.j2`)**
+
+```bash
+
 {% if model_name %}
 name: "{{ model_name }}"
 {% endif %}
@@ -54,12 +55,12 @@ output [
 ]
 ```
 
-2. Declarative Model Catalog (`model_catalog.yaml`)
+**Declarative Model Catalog (`model_catalog.yaml`)**
 
 Acts as the single source of truth for all serving workloads across LLM, embedding, and vision backends.
 
 ```yaml
-YAML
+
 models:
   # 1. Large Language Model (vLLM C++ Backend)
   - model_name: "qwen_1b"
@@ -117,7 +118,7 @@ models:
 ```
 
 
-3. Engine-Specific Runtime Overrides (`model_repository/qwen_1b/1/model.json`)
+**Engine-Specific Runtime Overrides (`model_repository/qwen_1b/1/model.json`)**
 
 Directly overrides internal vLLM execution limits and memory allocation without polluting global server parameters.
 
@@ -131,7 +132,7 @@ Directly overrides internal vLLM execution limits and memory allocation without 
 ```
 
 
-4. Compiler Script (`scripts/compile_configs.py`)
+**Compiler Script (`scripts/compile_configs.py`)**
    
 Parses the declarative YAML specification and writes concrete config.pbtxt Protobuf files into each target model repository path.
 
@@ -169,14 +170,16 @@ if __name__ == "__main__":
     compile_triton_configs()
 ```
 
-5. Execution Pipeline
+
+**Execution Pipeline**
+
 ```bash
 # Setup virtual environment and dependencies using uv
 uv venv
 uv pip install jinja2 pyyaml
 ```
 
-6. Expected Output Artifact Tree
+**Expected Output Artifact Tree**
    
 Executing Phase II generates the following file layout, ready for downstream OCI container baking (Phase III) or Helm mounting (Phase IV):
 
@@ -194,5 +197,6 @@ model_repository/
     └── config.pbtxt              # Compiled Protobuf configuration
 ```
 
-# Compile model configurations
+**Compile model configurations**
+
 uv run python scripts/compile_configs.py
