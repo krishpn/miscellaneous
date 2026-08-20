@@ -2,18 +2,28 @@
 [**TECHNICAL STEPS: Setup & Deployment Guide**](https://krishpn.github.io/projects/20260816/)
 
 
+**Directory Structure & Git Workspace Initialization**
+
+Creates the standard repository hierarchy and initializes Git tracking with appropriate weight/binary exclusions.
+
+
 ```bash
-  ## 1. Directory Structure Setup
-  mkdir -p <DIRECTORY>/.github/workflows \
-         <DIRECTORY>/apps/gateway \
-         <DIRECTORY>/model_repository/qwen_1b/1 \
-         <DIRECTORY>/model_repository/bge_small_embedding/1 \
-         <DIRECTORY>/model_repository/resnet50_vision/1 \
-         <DIRECTORY>/deploy/base \
-         <DIRECTORY>/deploy/overlays/local-k3s \
-         <DIRECTORY>/deploy/overlays/aws-eks \
-         <DIRECTORY>/templates \
-         <DIRECTORY>/scripts
+  
+  # Set your target workspace path
+  WORKSPACE_DIR="./triton-k3s-inference"
+  # Create directory scaffold
+  mkdir -p ${WORKSPACE_DIR}/.github/workflows \
+          ${WORKSPACE_DIR}/apps/gateway \
+          ${WORKSPACE_DIR}/model_repository/qwen_1b/1 \
+          ${WORKSPACE_DIR}/model_repository/bge_small_embedding/1 \
+          ${WORKSPACE_DIR}/model_repository/resnet50_vision/1 \
+          ${WORKSPACE_DIR}/deploy/base \
+          ${WORKSPACE_DIR}/deploy/overlays/local-k3s \
+          ${WORKSPACE_DIR}/deploy/overlays/aws-eks \
+          ${WORKSPACE_DIR}/templates \
+          ${WORKSPACE_DIR}/scripts
+
+  cd ${WORKSPACE_DIR}
 ```
 
 
@@ -42,7 +52,42 @@
 └── model_catalog.yaml          # Declarative multi-modal model spec
 ```
 
-**Host Prerequisites & GPU Setup**
+
+**Git Initialization**
+
+```bash
+
+  git init
+  git branch -M main
+
+  cat << 'EOF' > .gitignore
+  # Python
+  __pycache__/
+  *.pyc
+  .venv/
+  env/
+
+  # OS / Editors
+  .DS_Store
+  .idea/
+  .vscode/
+
+  # Model Weights & Artifacts
+  *.onnx
+  *.engine
+  *.bin
+  *.pt
+  *.safetensors
+  EOF
+
+  find . -type d -not -path '*/.*' -exec touch {}/.gitkeep \;
+  git add .
+  git commit -m "initial commit: project structure and gitignore"
+```
+
+**Host Prerequisites & NVIDIA Container Toolkit Setup**
+
+Installs the host-level NVIDIA container runtime dependencies so container engines can interface directly with GPU hardware drivers.
 
 ```bash
   # 1. Add GPG Key
@@ -61,7 +106,10 @@
   nvidia-ctk --version
 ```
 
-**K3s Infrastructure Provisioning & Fixes**
+**K3s Containerd Runtime & CNI Patching**
+
+Fixes CNI networking paths and configures K3s Containerd template to enforce nvidia as the default container runtime.
+
 
 _Fix CNI Configuration Pathing:_
 
@@ -117,9 +165,12 @@ _Configure Persistent Containerd NVIDIA Runtime:_
 ```
 
 
-_Deploy NVIDIA Device Plugin:_
+**NVIDIA Device Plugin Deployment & Verification**
+
+Deploys the NVIDIA Kubernetes Device Plugin DaemonSet to report allocatable GPU hardware capacity to the control plane.
 
 ```bash
+  # Clean up stale DaemonSets and apply official NVIDIA plugin
   kubectl delete daemonset -n kube-system nvidia-device-plugin-daemonset --ignore-not-found
   kubectl apply -f [https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.0/deployments/static/nvidia-device-plugin.yml](https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.0/deployments/static/nvidia-device-plugin.yml)
 ```
@@ -127,37 +178,11 @@ _Deploy NVIDIA Device Plugin:_
 _Verify GPU Allocatable Capacity:_
 
 ```bash
+  # Verify allocatable GPU capacity across nodes
   kubectl get nodes -o custom-columns=NAME:.metadata.name,GPUs:.status.allocatable."nvidia\.com/gpu"
 ```
 
-**Git Initialization**
-
-```bash
-
-  git init
-  git branch -M main
-
-  cat << 'EOF' > .gitignore
-  # Python
-  __pycache__/
-  *.pyc
-  .venv/
-  env/
-
-  # OS / Editors
-  .DS_Store
-  .idea/
-  .vscode/
-
-  # Model Weights & Artifacts
-  *.onnx
-  *.engine
-  *.bin
-  *.pt
-  *.safetensors
-  EOF
-
-  find . -type d -not -path '*/.*' -exec touch {}/.gitkeep \;
-  git add .
-  git commit -m "initial commit: project structure and gitignore"
+```text
+NAME         GPUs
+local-k3s    1
 ```
