@@ -66,8 +66,6 @@ This phase packages compiled model configurations and custom runtime dependencie
   * Test inference pipelines using `curl` payloads for LLM streaming, text embeddings, and vision classification.
 
 
-
-
 ## Phase IV: Production Cloud Migration & GitOps (AWS EKS)
 
 This phase automates the infrastructure transition from a single-node local setup to a highly available, cloud-native architecture on AWS EKS.
@@ -86,6 +84,56 @@ This phase automates the infrastructure transition from a single-node local setu
 
 
 
+```text
++---------------------------------------------------------------------------------------------------+
+| LAYER 1: CONFIG COMPILATION ENGINE (Phase II)                                                     |
+|                                                                                                   |
+|  [ model_catalog.yaml ] + [ templates/config.pbtxt.j2 ]                                            |
+|                                │                                                                  |
+|                                ▼ (uv run python scripts/compile_configs.py)                       |
+|  [ Compiled Model Repository Artifacts ] ──> model_repository/<model>/config.pbtxt                |
++---------------------------------------------------------------------------------------------------+
+                                 │
+                                 │ Mounts via Absolute HostPath
+                                 ▼
++---------------------------------------------------------------------------------------------------+
+| LAYER 2: LOCAL K3s CLUSTER - SINGLE NODE (Phase I & III - NVIDIA RTX 3070 Ti)                     |
+|                                                                                                   |
+|  [ NodePort Ingress Services: HTTP (30800) | gRPC (30801) | Metrics (30802) ]                    |
+|                                │                                                                  |
+|                                ▼                                                                  |
+|  [ Triton Inference Server Pod (Namespace: triton) ]                                              |
+|   ├── Image: triton-custom:24.08                                                                  |
+|   ├── Container Runtime: Containerd (runtimeClassName: nvidia)                                    |
+|   ├── Memory IPC: Shared Memory /dev/shm (Mounted via RAM emptyDir)                                |
+|   ├── Flags: --model-control-mode=explicit --load-model=bge_small_embedding ...                   |
+|   │                                                                                               |
+|   ├── ONNX Runtime Backend ──> bge_small_embedding (Dynamic Batching, Instances: 2)               |
+|   ├── ONNX Runtime Backend ──> resnet50_vision     (Dynamic Batching, Instances: 2)               |
+|   └── vLLM C++ Backend     ──> qwen_1b             (Decoupled Streaming, model.json 75% VRAM)    |
+|                                                                                                   |
+|  [ Shared VRAM Hardware Pool (8 GB) ] ──> Dynamic Reclaim via POST /v2/repository/.../unload      |
++---------------------------------------------------------------------------------------------------+
+                                 │
+                                 │ Git Push / Kustomize Stratification
+                                 ▼
++---------------------------------------------------------------------------------------------------+
+| LAYER 3: GITOPS & CLOUD MIGRATION TARGET (Phase IV - AWS EKS)                                     |
+|                                                                                                   |
+|  [ Git Repository (krishpn/triton-k3s-inference) ]                                                |
+|   ├── deploy/base/                     (Core Kubernetes Manifests)                                  |
+|   └── deploy/overlays/aws-eks/         (S3 CSI Mounts, HPA, AWS Node Groups)                          |
+|                                │                                                                  |
+|                                ▼                                                                  |
+|  [ ArgoCD Continuous Delivery Engine ]                                                            |
+|                                │                                                                  |
+|                                ▼                                                                  |
+|  [ AWS EKS Production Infrastructure ]                                                            |
+|   ├── Storage Layer: AWS S3 Bucket (s3://model-weights-registry) via S3 CSI Driver               |
+|   ├── Compute Layer: Auto-Scaling Multi-GPU Node Groups (NVIDIA g5 / p4d Instances)              |
+|   └── Network Layer: AWS ALB Ingress Gateway + gRPC / HTTP Load Balancing                         |
++---------------------------------------------------------------------------------------------------+
 
+```
 
 
