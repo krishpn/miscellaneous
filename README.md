@@ -34,7 +34,6 @@ This phase abstracts raw Protobuf (`config.pbtxt`) creation into a Python- and J
   * **Dynamic Jinja2 Templating (`templates/config.pbtxt.j2`):**
   * Define master template rules for decoupled LLM streaming, dynamic batching delay queues, multi-instance GPU replication, and variable input/output tensor shapes.
 
-
 * **Multi-Modal Model Catalog (`model_catalog.yaml`):**
   * Establish a single declarative specification defining model schemas across vLLM (`qwen_1b`), ONNX text embeddings (`bge_small_embedding`), and vision backends (`resnet50_vision`).
 
