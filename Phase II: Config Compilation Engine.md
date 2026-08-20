@@ -1,8 +1,10 @@
 
 
-This template dynamically handles decoupled streaming (vLLM), dynamic batching queues, GPU instance duplication, and variable input/output tensor shapes.
+Phase II template dynamically handles decoupled streaming (vLLM), dynamic batching queues, GPU instance duplication, and variable input/output tensor shapes.
 
 **Master Jinja2 Config Template (`templates/config.pbtxt.j2`)**
+
+Defines _what_ goes inside the configuration file. It renders the Protobuf text containing model schemas, tensor shapes (`INT64`, `FP32`), backends (`vllm`, `onnxruntime`), dynamic batching queues, and transaction policies.
 
 ```bash
 
