@@ -255,3 +255,17 @@ curl -s -X POST "http://${TRITON_HOST}:${TRITON_PORT}/v2/repository/index" | jq 
 done
 
 ```
+
+
+
+### Comparative Matrix: Local (nkepsX) vs. AWS EKS Cloud (cicdtest)
+
+| Operational Layer | Local Environment (nkepsX / k3s) | Production Cloud (cicdtest / AWS EKS) | Impact & Migration Strategy |
+| :--- | :--- | :--- | :--- |
+| **Model Storage** | **Local File System**<br>`hostPath` mounted from `/models` | **Amazon S3**<br>`s3://<bucket>/model_repository` | Move models out of Git/containers into S3. Triton streams weights directly at startup. |
+| **Authentication & IAM** | **Local Permissions**<br>POSIX `chmod 755` file mounts | **AWS IRSA**<br>IAM Roles for Service Accounts | Attach ServiceAccounts with IAM roles to pods so Triton authenticates to S3 without static keys. |
+| **Container Registry** | **Local / Private**<br>`localhost:5000` or local `containerd` | **GitHub Container Registry / ECR**<br>`ghcr.io/krishpn/cicdtest` | Push images in CI/CD pipeline using GitHub Actions with `packages: write` permissions. |
+| **Manifest Deployment** | **Manual Shell Scripts**<br>Raw `kubectl apply` + `envsubst` | **Automated GitOps / Helm**<br>ArgoCD / Flux syncing `helm/` | Replace raw `.yaml` templates with parameterized Helm charts managed via GitOps triggers. |
+| **Networking & Ingress** | **NodePort**<br>`30810` / `30811` static host ports | **AWS Load Balancer Controller**<br>ClusterIP + AWS ALB/NLB | Use standard K8s Ingress resources with annotations targeting AWS Application/Network Load Balancers. |
+| **Node Scheduling & GPUs** | **Fixed Single Host**<br>Manual pod deletion to clear GPU locks | **Karpenter / Autoscaler**<br>EC2 GPU Node Groups (`g4dn`, `g5`) | Karpenter automatically provisions/terminates GPU EC2 instances based on pending pod requests. |
+| **Verification & Testing** | **Manual Terminal Commands**<br>`curl` endpoints directly | **Automated Integration Testing**<br>`test.py` triggered in CI/CD | Execute `test.py` post-deployment in GitHub Actions to validate model readiness automatically. |
